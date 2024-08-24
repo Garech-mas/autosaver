@@ -4,6 +4,6 @@
 [submodule "autosaver/winwrap"]
 	path = autosaver/winwrap
 	url = https://github.com/epi5131/winwrap.git
-[submodule "autosaver/json.h"]
-	path = autosaver/json.h
-	url = https://github.com/sheredom/json.h
+[submodule "autosaver/json"]
+	path = autosaver/json
+	url = https://github.com/nlohmann/json.git
