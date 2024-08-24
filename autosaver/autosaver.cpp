@@ -310,7 +310,6 @@ BOOL __cdecl func_proc(FilterPlugin* fp, FilterProcInfo* fpip) {
 	auto& setting = get_setting();
 	
 	bool is_saving = fp->exfunc->is_saving(fpip->editp);
-	printf("fp");
 	const auto now = chrono::system_clock::now();
 
 	if (!is_saving && now - state.last_saved > setting.duration) run(fp);
