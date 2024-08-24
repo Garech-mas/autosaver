@@ -277,7 +277,6 @@ BOOL run(FilterPlugin* fp) {
 
 	TRY_START:
 	try {
-		log("保存します");
 		auto autosave_dir = get_autosave_dir();
 		save_project(generate_filepath(setting.file_format));
 
