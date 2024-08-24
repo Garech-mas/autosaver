@@ -2,10 +2,8 @@
 #pragma once
 
 #include <fstream>
-#include <chrono>
 #include <filesystem>
 #include <string>
-#include <codecvt>
 
 #include <nlohmann/json.hpp>
 #include <aviutl/filter.hpp>
