@@ -20,7 +20,7 @@ using namespace filesystem;
 using namespace AviUtl;
 using namespace nlohmann;
 
-const wstring DEFAULT_DATE_FORMAT = L"%F-%X";
+const wstring DEFAULT_DATE_FORMAT = L"%PROJECTNAME%_%F_%R";
 
 
 struct Setting {
