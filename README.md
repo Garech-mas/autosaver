@@ -81,6 +81,8 @@ Original made by ePi5131 https://github.com/ePi5131
 
 
 ## 更新履歴
+### r3_gr_3
+- 開発時に入れてたコードが残っていたのを修正
 ### r3_gr_1
 フォーク版初版。
 - GUIウィンドウを追加
