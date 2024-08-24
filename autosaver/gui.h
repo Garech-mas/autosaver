@@ -10,4 +10,4 @@ const int ID_BUTTON_BACKUP_SAVE_PATH = 1007;	// バックアップ場所 参照 
 const int ID_EDIT_BACKUP_SAVE_PATH = 1008;		// バックアップ場所 エディットボックス
 const int ID_EDIT_FILE_NAME = 1010;				// 保存ファイル名形式 エディットボックス
 
-BOOL func_WndProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam, AviUtl::EditHandle* editp, AviUtl::FilterPlugin* fp);
+BOOL func_WndProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam, EditHandle* editp, FilterPlugin* fp);

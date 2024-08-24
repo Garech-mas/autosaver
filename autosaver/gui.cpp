@@ -2,7 +2,7 @@
 #include "gui.h"
 
 
-std::wstring show_folder_dialog(HWND hwnd)
+wstring show_folder_dialog(HWND hwnd)
 {
     IFileDialog* pfd = nullptr;
     HRESULT hr = CoCreateInstance(CLSID_FileOpenDialog, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pfd));
@@ -27,7 +27,7 @@ std::wstring show_folder_dialog(HWND hwnd)
         CoTaskMemFree(pidl_default);
     }
 
-    std::wstring selected_path;
+    wstring selected_path;
 
     // ダイアログを表示
     hr = pfd->Show(hwnd);
@@ -52,7 +52,7 @@ std::wstring show_folder_dialog(HWND hwnd)
     return selected_path;
 }
 
-BOOL func_WndProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam, AviUtl::EditHandle* editp, AviUtl::FilterPlugin* fp) {
+BOOL func_WndProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam, EditHandle* editp, FilterPlugin* fp) {
     auto& setting = get_setting();
     auto& state = get_state();
 
@@ -94,7 +94,7 @@ BOOL func_WndProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam, AviUtl:
         HWND edit_backup_interval = CreateWindowExA(
             WS_EX_CLIENTEDGE,
             "EDIT",
-            std::to_string((static_cast<int>(setting.duration.count()) + 59) / 60).c_str(),
+            to_string((static_cast<int>(setting.duration.count()) + 59) / 60).c_str(),
             WS_CHILD | WS_TABSTOP | WS_VISIBLE | ES_LEFT | ES_NUMBER,
             140, 50,
             70, 20,
@@ -121,7 +121,7 @@ BOOL func_WndProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam, AviUtl:
         HWND edit_backup_limit = CreateWindowExA(
             WS_EX_CLIENTEDGE,
             "EDIT",
-            std::to_string(setting.max_autosaves).c_str(),
+            to_string(setting.max_autosaves).c_str(),
             WS_CHILD | WS_TABSTOP | WS_VISIBLE | ES_LEFT | ES_NUMBER,
             140, 70,
             70, 20,
@@ -207,25 +207,29 @@ BOOL func_WndProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam, AviUtl:
         switch (LOWORD(wparam)) {
 
         case ID_OPEN_BACKUP_FILE:
-            fp->exfunc->edit_open(*state.adr_editp, const_cast<char*>((get_autosave_dir() / "*.aup_backup").string().c_str()),
-                AviUtl::ExFunc::EditOpenFlag::Project | AviUtl::ExFunc::EditOpenFlag::Dialog);
+        {
+            string backup_file_ext = wstr_to_sjis(setting.backup_file_ext);
+            fp->exfunc->edit_open(*state.adr_editp, const_cast<char*>((get_autosave_dir() / ("*" + backup_file_ext)).string().c_str()),
+                ExFunc::EditOpenFlag::Project | ExFunc::EditOpenFlag::Dialog);
+            *state.new_project_flag = 0;
             break;
+        }
         case ID_EDIT_BACKUP_INTERVAL:
             if (HIWORD(wparam) == EN_KILLFOCUS) {
                 WCHAR buf[16];
                 GetDlgItemText(hwnd, ID_EDIT_BACKUP_INTERVAL, buf, sizeof(buf) / sizeof(WCHAR));
                 if (_wtoi(buf) < 1) {
                     MessageBeep(MB_OK);
-                    setting.duration = std::chrono::minutes(1);
+                    setting.duration = chrono::minutes(1);
                     SetDlgItemText(hwnd, ID_EDIT_BACKUP_INTERVAL, L"1");
                 }
                 else if (_wtoi(buf) > 10000) {
                     MessageBeep(MB_OK);
-                    setting.duration = std::chrono::minutes(10000);
+                    setting.duration = chrono::minutes(10000);
                     SetDlgItemText(hwnd, ID_EDIT_BACKUP_INTERVAL, L"10000");
                 }
                 else {
-                    setting.duration = std::chrono::minutes(_wtoi(buf));
+                    setting.duration = chrono::minutes(_wtoi(buf));
                 }
                 setting.store(state.setting_path);
             }
@@ -247,25 +251,20 @@ BOOL func_WndProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam, AviUtl:
         {
             auto before_save_path = setting.save_path;
             try {
-                std::wstring new_path = show_folder_dialog(hwnd);
+                wstring new_path = show_folder_dialog(hwnd);
                 if (!new_path.empty())
                 {
                     setting.save_path = new_path;
                     SetDlgItemText(hwnd, ID_EDIT_BACKUP_SAVE_PATH, setting.save_path.c_str());
                     
                 }
-                generate_formatted_filename(setting.file_format);
+                generate_filepath(setting.file_format);
             }
-            catch (std::system_error) {
+            catch (system_error) {
                 MessageBeep(MB_OK);
                 log("不正なファイル名形式が入力されました。");
                 setting.save_path = before_save_path;
                 SetDlgItemText(hwnd, ID_EDIT_BACKUP_SAVE_PATH, setting.save_path.c_str());
-            }
-            catch (const std::filesystem::filesystem_error) {
-                MessageBeep(MB_OK);
-                log("不正なファイル名形式が入力されました。");
-                SetDlgItemText(hwnd, ID_EDIT_FILE_NAME, setting.file_format.c_str());
             }
             setting.store(state.setting_path);
 
@@ -280,9 +279,9 @@ BOOL func_WndProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam, AviUtl:
                 auto before_save_path = setting.save_path;
                 setting.save_path = buf;
                 try {
-                    generate_formatted_filename(setting.file_format);
+                    generate_filepath(setting.file_format);
                 }
-                catch (std::filesystem::filesystem_error) {
+                catch (filesystem_error) {
                     MessageBeep(MB_OK);
                     log("不正な保存場所が入力されました。");
                     setting.save_path = before_save_path;
@@ -304,20 +303,20 @@ BOOL func_WndProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam, AviUtl:
                 }
 
                 try {
-                    log("保存ファイル名: \"" + generate_formatted_filename(buf) + "\"");
+                    auto filename = path(generate_filepath(buf)).filename();
+                    log("保存ファイル名: \"" + filename.string() + "\"");
                     setting.file_format = buf;
                 }
-                catch (const std::format_error) {
+                catch (const format_error) {
                     MessageBeep(MB_OK);
                     log("不正なファイル名形式が入力されました。");
                     SetDlgItemText(hwnd, ID_EDIT_FILE_NAME, setting.file_format.c_str());
                 }
-                catch (const std::filesystem::filesystem_error) {
+                catch (const filesystem_error) {
                     MessageBeep(MB_OK);
                     log("不正なファイル名形式が入力されました。");
                     SetDlgItemText(hwnd, ID_EDIT_FILE_NAME, setting.file_format.c_str());
                 }
-
 
                 setting.store(state.setting_path);
             }

@@ -76,7 +76,7 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)aviutl_exedit_sdk;$(ProjectDir)winwrap;$(ProjectDir)json.h</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)aviutl_exedit_sdk;$(ProjectDir)winwrap</AdditionalIncludeDirectories>
       <AdditionalOptions>/source-charset:utf-8  /d1clrcxxstd %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
@@ -97,8 +97,10 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)aviutl_exedit_sdk;$(ProjectDir)winwrap;$(ProjectDir)json.h</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)aviutl_exedit_sdk;$(ProjectDir)winwrap</AdditionalIncludeDirectories>
       <AdditionalOptions>/source-charset:utf-8  /d1clrcxxstd %(AdditionalOptions)</AdditionalOptions>
+      <DisableSpecificWarnings>4828;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <ExceptionHandling>Async</ExceptionHandling>
     </ClCompile>
     <Link>
       <SubSystem>NotSet</SubSystem>
@@ -108,8 +110,13 @@
       <ModuleDefinitionFile>autosaver.def</ModuleDefinitionFile>
     </Link>
     <PostBuildEvent>
-      <Command>copy /Y "$(TargetPath)" "$(SolutionDir)Test\$(TargetFileName)"</Command>
+      <Command>copy /Y "$(TargetPath)" "$(SolutionDir)Test\$(TargetFileName)"
+$(SolutionDir)Test\aviutl.exe</Command>
     </PostBuildEvent>
+    <PreBuildEvent>
+      <Command>
+      </Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -119,9 +126,10 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <LanguageStandard>stdcpplatest</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)aviutl_exedit_sdk;$(ProjectDir)winwrap;$(ProjectDir)json.h</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalIncludeDirectories>$(ProjectDir)aviutl_exedit_sdk;$(ProjectDir)winwrap</AdditionalIncludeDirectories>
       <AdditionalOptions>/source-charset:utf-8  /d1clrcxxstd %(AdditionalOptions)</AdditionalOptions>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>NotSet</SubSystem>
@@ -136,12 +144,14 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="autosaver.cpp" />
+    <ClCompile Include="gui.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="autosaver.def" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="scope_exit.hpp" />
+    <ClInclude Include="autosaver.h" />
+    <ClInclude Include="gui.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />

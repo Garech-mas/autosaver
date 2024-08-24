@@ -2,11 +2,13 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="autosaver.cpp" />
+    <ClCompile Include="gui.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="autosaver.def" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="scope_exit.hpp" />
+    <ClInclude Include="gui.h" />
+    <ClInclude Include="autosaver.h" />
   </ItemGroup>
 </Project>
