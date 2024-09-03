@@ -91,5 +91,5 @@ Original made by ePi5131 https://github.com/ePi5131
 - デフォルトの保存先を `%PROJECTDIR%\autosaver` から `aviutl.exe直下\autosaver` に変更
 - デフォルトの保存間隔を5分から1分に変更
 - 出力直前にもバックアップを取るように変更
-- 出力ファイル名がUST基準の時刻になっていた問題を修正
+- 出力ファイル名がUTC基準の時刻になっていた問題を修正
 
