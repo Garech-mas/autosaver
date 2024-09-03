@@ -10,7 +10,7 @@
 #include <winwrap.hpp>
 
 #define PLUGIN_NAME "autosaver"
-#define PLUGIN_VERSION " r3_gr_3"
+#define PLUGIN_VERSION " r3_gr_4"
 #define PLUGIN_INFO PLUGIN_NAME PLUGIN_VERSION " by Garech (original by ePi)"
 
 using namespace std;

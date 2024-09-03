@@ -209,9 +209,11 @@ BOOL func_WndProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam, EditHan
         case ID_OPEN_BACKUP_FILE:
         {
             string backup_file_ext = wstr_to_sjis(setting.backup_file_ext);
-            fp->exfunc->edit_open(*state.adr_editp, const_cast<char*>((get_autosave_dir() / ("*" + backup_file_ext)).string().c_str()),
-                ExFunc::EditOpenFlag::Project | ExFunc::EditOpenFlag::Dialog);
-            *state.new_project_flag = 0;
+            if (fp->exfunc->edit_open(*state.adr_editp, const_cast<char*>((get_autosave_dir() / ("*" + backup_file_ext)).string().c_str()),
+                ExFunc::EditOpenFlag::Project | ExFunc::EditOpenFlag::Dialog)) {
+                *state.new_project_flag = 0;
+            }
+            
             break;
         }
         case ID_EDIT_BACKUP_INTERVAL:
