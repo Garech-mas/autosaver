@@ -113,7 +113,6 @@ path get_autosave_dir() {
 }
 
 string generate_filepath(wstring format) {
-	auto backup_file_ext = wstr_to_sjis(get_setting().backup_file_ext);
 	// %PROJECTNAME% を置換
 	size_t projectNamePos = format.find(L"%PROJECTNAME%");
 	if (projectNamePos != wstring::npos) {
@@ -145,10 +144,10 @@ string generate_filepath(wstring format) {
 	// ファイルが既に存在する場合、末尾にナンバリングを付加
 	int counter = 1;
 	string base_filename = filename;
-	while (exists(autosave_dir / (filename + backup_file_ext))) {
+	while (exists(autosave_dir / (filename + ".aup"))) {
 		filename = base_filename + "-" + to_string(counter++);
 	}
-	auto fullpath = autosave_dir / (filename + backup_file_ext);
+	auto fullpath = autosave_dir / (filename + ".aup");
 	if (wstr_to_sjis(fullpath).size() > 260) {
 		throw filesystem_error("Path exceeds 260 characters.", error_code());
 	}
@@ -179,10 +178,6 @@ void Setting::load(const path& path) {
 	if (j.contains("maxAutosaves")) {
 		max_autosaves = j["maxAutosaves"].get<size_t>();
 	}
-
-	if (j.contains("extension")) {
-		backup_file_ext = str_to_wstr(j["extension"].get<string>());
-	}
 }
 
 void Setting::store(const path& path) const {
@@ -191,7 +186,6 @@ void Setting::store(const path& path) const {
 	j["savePath"] = wstr_to_utf8(save_path);
 	j["fileFormat"] = wstr_to_utf8(file_format);
 	j["maxAutosaves"] = max_autosaves;
-	j["extension"] = wstr_to_utf8(backup_file_ext);
 
 	ofstream ofs{ path };
 	if (ofs) {
@@ -211,8 +205,10 @@ void save_project(const path& path) {
 void delete_old_project(const path& path, size_t maxAutosaves) {
 	// 保存されているファイルを取得して、ファイル数を制限
 	vector<::path> files;
+	
 	for (const auto& entry : directory_iterator(path)) {
-		if (entry.is_regular_file() && entry.path().extension() == get_setting().backup_file_ext) {
+		std::wstring ext = entry.path().extension().wstring();
+		if (ext.starts_with(L".aup")) {
 			files.push_back(entry.path());
 		}
 	}
@@ -235,7 +231,7 @@ BOOL __cdecl func_init(FilterPlugin* fp) {
 	state.last_saved = chrono::system_clock::now();
 
 	if (state.si.build != 11003) {
-		MessageBoxW(fp->hwnd_parent, L"バージョン1.10のAviUtlが必要です。", str_to_wstr(PLUGIN_NAME).c_str(), MB_ICONINFORMATION);
+		MessageBoxW(fp->hwnd_parent, L"autosaverを動作させるためには、バージョン1.10のAviUtlが必要です。", str_to_wstr(PLUGIN_NAME).c_str(), MB_ICONINFORMATION);
 		return FALSE;
 	}
 
@@ -296,22 +292,22 @@ BOOL run(FilterPlugin* fp) {
 			goto TRY_START;
 		}
 		else {
-			throw;
+			return FALSE;
 		}
 	}
 	catch (...) {
 		MessageBoxW(fp->hwnd_parent, L"バックアップの保存中にエラーが発生しました。", str_to_wstr(PLUGIN_NAME).c_str(), MB_ICONWARNING);
 	}
+	return TRUE;
 }
 BOOL __cdecl func_proc(FilterPlugin* fp, FilterProcInfo* fpip) {
 	auto& state = get_state();
 	fp->exfunc->get_sys_info(fpip->editp, &state.si);
+	if (!fp->exfunc->is_editing(fpip->editp)) return FALSE;
 	auto& setting = get_setting();
-	
-	bool is_saving = fp->exfunc->is_saving(fpip->editp);
 	const auto now = chrono::system_clock::now();
 
-	if (!is_saving && now - state.last_saved > setting.duration) run(fp);
+	if (now - state.last_saved > setting.duration) run(fp);
 
 	return TRUE;
 }
@@ -323,7 +319,7 @@ BOOL func_save_start(FilterPlugin* fp, int32_t s, int32_t e, EditHandle* editp) 
 
 using Flag = FilterPluginDLL::Flag;
 FilterPluginDLL filter{
-	.flag = Flag::AlwaysActive | Flag::DispFilter | Flag::ExInformation | Flag::WindowSize,
+	.flag = Flag::AlwaysActive | Flag::DispFilter | Flag::ExInformation | Flag::WindowSize | Flag::PriorityHighest,
 	.x = 235,
 	.y = 210,
 	.name = PLUGIN_NAME,
@@ -331,7 +327,7 @@ FilterPluginDLL filter{
 	.func_init = func_init,
 	.func_WndProc = func_WndProc,
 	.information = PLUGIN_INFO,
-	.func_save_start = func_save_start,
+	.func_save_start = func_save_start
 };
 
 auto __stdcall GetFilterTable() {

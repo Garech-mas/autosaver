@@ -10,7 +10,7 @@
 #include <winwrap.hpp>
 
 #define PLUGIN_NAME "autosaver"
-#define PLUGIN_VERSION " r3_gr_4"
+#define PLUGIN_VERSION " r3_gr_5"
 #define PLUGIN_INFO PLUGIN_NAME PLUGIN_VERSION " by Garech (original by ePi)"
 
 using namespace std;
@@ -25,7 +25,6 @@ struct Setting {
     chrono::seconds duration{ 60 };
     path save_path{};
     wstring file_format{ DEFAULT_DATE_FORMAT };
-    wstring backup_file_ext = { L".aup_backup" };
     size_t max_autosaves{ 100 };
 
     void load(const path& path);
@@ -39,10 +38,8 @@ struct State {
     path default_dir;                                       // AviUtl/autosaver のパス
     chrono::system_clock::time_point last_saved;            // 最後に保存した時間
     SysInfo si;                                             // AviUtl::SysInfo
-    bool last_is_saving = false;                            // 直前のfunc_procで得たis_savingの値
     EditHandle** adr_editp{};                               // エディットハンドル
     uintptr_t* new_project_flag{};                          // 0なら新規プロジェクトとして読み込む
-                                                                // （.aup_backupに上書き保存させないための対処）
 	BOOL(__fastcall* save_project)(EditHandle*, LPCSTR) {}; // プロジェクト保存関数へのポインタ
 };
 State& get_state();

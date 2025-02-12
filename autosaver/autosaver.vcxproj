@@ -130,6 +130,8 @@ $(SolutionDir)Test\aviutl.exe</Command>
       <AdditionalIncludeDirectories>$(ProjectDir)aviutl_exedit_sdk;$(ProjectDir)winwrap</AdditionalIncludeDirectories>
       <AdditionalOptions>/source-charset:utf-8  /d1clrcxxstd %(AdditionalOptions)</AdditionalOptions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <Optimization>MinSpace</Optimization>
+      <FavorSizeOrSpeed>Size</FavorSizeOrSpeed>
     </ClCompile>
     <Link>
       <SubSystem>NotSet</SubSystem>

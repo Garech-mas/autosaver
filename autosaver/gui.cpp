@@ -67,7 +67,7 @@ BOOL func_WndProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam, EditHan
         // ボタン配置
         HWND button_open_backup_file = CreateWindowA(
             "BUTTON",
-            "バックアップファイルから開く",
+            "バックアップフォルダから開く",
             WS_CHILD | WS_GROUP | WS_VISIBLE | BS_PUSHBUTTON | BS_VCENTER,
             10, 10,
             200, 30,
@@ -207,15 +207,9 @@ BOOL func_WndProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam, EditHan
         switch (LOWORD(wparam)) {
 
         case ID_OPEN_BACKUP_FILE:
-        {
-            string backup_file_ext = wstr_to_sjis(setting.backup_file_ext);
-            if (fp->exfunc->edit_open(*state.adr_editp, const_cast<char*>((get_autosave_dir() / ("*" + backup_file_ext)).string().c_str()),
-                ExFunc::EditOpenFlag::Project | ExFunc::EditOpenFlag::Dialog)) {
-                *state.new_project_flag = 0;
-            }
-            
+            fp->exfunc->edit_open(*state.adr_editp, const_cast<char*>((get_autosave_dir() / ("*.aup;*.aup_backup")).string().c_str()),
+                ExFunc::EditOpenFlag::Project | ExFunc::EditOpenFlag::Dialog);
             break;
-        }
         case ID_EDIT_BACKUP_INTERVAL:
             if (HIWORD(wparam) == EN_KILLFOCUS) {
                 WCHAR buf[16];
@@ -258,7 +252,7 @@ BOOL func_WndProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam, EditHan
                 {
                     setting.save_path = new_path;
                     SetDlgItemText(hwnd, ID_EDIT_BACKUP_SAVE_PATH, setting.save_path.c_str());
-                    
+
                 }
                 generate_filepath(setting.file_format);
             }
@@ -289,7 +283,7 @@ BOOL func_WndProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam, EditHan
                     setting.save_path = before_save_path;
                     SetDlgItemText(hwnd, ID_EDIT_BACKUP_SAVE_PATH, setting.save_path.c_str());
                 }
-                
+
                 setting.store(state.setting_path);
             }
             break;
@@ -326,6 +320,14 @@ BOOL func_WndProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam, EditHan
             break;
 
         }
+        break;
+    case AviUtl::detail::FilterPluginWindowMessage::FileOpen:
+        // プロジェクトファイルが開かれたとき
+        if (state.si.project_name != NULL && ::path{ state.si.project_name }.parent_path() == get_autosave_dir()) {
+            MessageBoxW(fp->hwnd_parent, L"バックアップフォルダ内のプロジェクトファイルを開いています。元ファイルへの上書き保存を忘れずに行ってください。", str_to_wstr(PLUGIN_NAME).c_str(), MB_ICONINFORMATION);
+            *state.new_project_flag = 0;
+        }
+        break;
     }
     return FALSE;
 }
