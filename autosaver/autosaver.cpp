@@ -327,7 +327,8 @@ FilterPluginDLL filter{
 	.func_init = func_init,
 	.func_WndProc = func_WndProc,
 	.information = PLUGIN_INFO,
-	.func_save_start = func_save_start
+	.func_save_start = func_save_start,
+	
 };
 
 auto __stdcall GetFilterTable() {
