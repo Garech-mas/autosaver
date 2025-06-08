@@ -4,19 +4,18 @@
 #include <fstream>
 #include <filesystem>
 #include <string>
+#include <Shlwapi.h>
+#pragma comment(lib, "Shlwapi.lib")
 
-#include <nlohmann/json.hpp>
 #include <aviutl/filter.hpp>
-#include <winwrap.hpp>
 
 #define PLUGIN_NAME "autosaver"
-#define PLUGIN_VERSION " r3_gr_5"
+#define PLUGIN_VERSION " r3_gr_6"
 #define PLUGIN_INFO PLUGIN_NAME PLUGIN_VERSION " by Garech (original by ePi)"
 
 using namespace std;
 using namespace filesystem;
 using namespace AviUtl;
-using namespace nlohmann;
 
 const wstring DEFAULT_DATE_FORMAT = L"%PROJECTNAME%_%F_%R";
 

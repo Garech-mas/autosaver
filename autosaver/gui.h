@@ -1,6 +1,5 @@
 ﻿#pragma once
 
-#include <windows.h>
 #include <shlobj.h>
 
 const int ID_OPEN_BACKUP_FILE = 1001;			// Aviutl.exeがあるフォルダを開く ボタン

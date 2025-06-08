@@ -70,45 +70,48 @@ wstring get_project_name() {
 path get_autosave_dir() {
 	auto& setting = get_setting();
 	auto& state = get_state();
-	path project_dir;
+	wstring path_str = setting.save_path;
 	wstring project_name = get_project_name();
-	string path_str = setting.save_path.string();
+	wstring project_dir;
 
-	// `%PROJECTNAME%` を置き換える
-	size_t projectNamePos = path_str.find("%PROJECTNAME%");
-	if (projectNamePos != string::npos) {
-		path_str.replace(projectNamePos, strlen("%PROJECTNAME%"), wstr_to_sjis(project_name));
-	}
-
-	// `%PROJECTDIR%` を置き換える 新規プロジェクトならAviUtl/autosaves直下
-	if (state.si.project_name && state.si.project_name[0] != '\0') {
-		project_dir = path{ state.si.project_name }.parent_path();
+	if (state.si.project_name && state.si.project_name[0] != L'\0') {
+		wstring project_path = str_to_wstr(state.si.project_name);
+		size_t last_slash = project_path.find_last_of(L"\\/");
+		project_dir = (last_slash != wstring::npos) ? project_path.substr(0, last_slash) : L"";
 	}
 	else {
 		project_dir = state.default_dir;
 	}
-	
-	size_t pos = path_str.find("%PROJECTDIR%");
-	int projdir_len = strlen("%PROJECTDIR%");
-	if (pos == 0) {
-		path_str.replace(pos, projdir_len, project_dir.string());
 
-		// バックアップフォルダの中を参照している場合、同フォルダにする
-		if (project_dir.string().ends_with(path_str.substr(pos + projdir_len))) {
-			path_str = project_dir.string();
-		}
+	size_t pos;
+
+	// %PROJECTNAME%
+	pos = path_str.find(L"%PROJECTNAME%");
+	if (pos != wstring::npos) {
+		path_str.replace(pos, wcslen(L"%PROJECTNAME%"), project_name);
 	}
 
-	// 相対パスの場合は `state.aviutl_dir` を基準にする
-	path path = ::path(path_str);
-	if (!path.is_absolute()) {
-		path = state.aviutl_dir / path;
+	// %PROJECTDIR%
+	pos = path_str.find(L"%PROJECTDIR%");
+	if (pos != wstring::npos) {
+		path_str.replace(pos, wcslen(L"%PROJECTDIR%"), project_dir);
 	}
 
-	// 実際に作ってみる (有効なパスでなければfilesystem_errorを投げる)
-	create_directories(path);
+	// 相対パス処理
+	if (PathIsRelativeW(path_str.c_str())) {
+		WCHAR buf[MAX_PATH] = {};
+		wcscpy_s(buf, state.aviutl_dir.c_str());
+		PathAppendW(buf, path_str.c_str());
+		path_str = buf;
+	}
 
-	return path;
+	// ディレクトリ作成（CreateDirectoryW は親ディレクトリがなければ失敗する）
+	if (GetFileAttributesW(path_str.c_str()) == INVALID_FILE_ATTRIBUTES) {
+		CreateDirectoryW(path_str.c_str(), nullptr);
+	}
+
+	return path_str;
+
 
 }
 
@@ -119,82 +122,89 @@ string generate_filepath(wstring format) {
 		format.replace(projectNamePos, wcslen(L"%PROJECTNAME%"), get_project_name());
 	}
 
-	// %を含んでいる時だけフォーマットする
-	string filename;
-	auto pos = format.find(L'%');
-	if (pos != wstring::npos) {
-		string before_percent = wstr_to_sjis(format.substr(0, pos));
-		string after_percent = wstr_to_sjis(format.substr(pos));
-		string format_str = before_percent + "{:L" + after_percent + "}";
+	// 日時文字列を作成
+	time_t t = time(nullptr);
+	tm local_tm;
+	localtime_s(&local_tm, &t);
 
-		const auto now = chrono::system_clock::now();
-		auto timezone = chrono::current_zone();
-		auto timestamp = chrono::zoned_time{ timezone, now };
-
-		filename = vformat(locale("ja_JP.utf8"), format_str, make_format_args(timestamp));
+	wchar_t datetime[256];
+	if (format.find(L'%') != wstring::npos) {
+		wcsftime(datetime, sizeof(datetime) / sizeof(wchar_t), format.c_str(), &local_tm);
 	}
-	// %が含まれていない場合、そのままfilenameに渡す
 	else {
-		filename = wstr_to_sjis(format);
+		wcscpy_s(datetime, format.c_str());
 	}
 
-	auto autosave_dir = get_autosave_dir();
+	string filename = wstr_to_sjis(datetime);
 	filename = sanitize_filename(filename);
 
-	// ファイルが既に存在する場合、末尾にナンバリングを付加
+	wstring autosave_dir = get_autosave_dir();
+	string fullpath_sjis;
 	int counter = 1;
-	string base_filename = filename;
-	while (exists(autosave_dir / (filename + ".aup"))) {
-		filename = base_filename + "-" + to_string(counter++);
-	}
-	auto fullpath = autosave_dir / (filename + ".aup");
-	if (wstr_to_sjis(fullpath).size() > 260) {
-		throw filesystem_error("Path exceeds 260 characters.", error_code());
-	}
-	return fullpath.string();
+	string base = filename;
+	do {
+		string trial = base + ((counter > 1) ? ("-" + to_string(counter)) : "") + ".aup";
+		wstring full = autosave_dir + L"\\" + str_to_wstr(trial);
+		fullpath_sjis = wstr_to_sjis(full);
+		counter++;
+	} while (GetFileAttributesA(fullpath_sjis.c_str()) != INVALID_FILE_ATTRIBUTES);
+
+	return fullpath_sjis;
+
 }
 
 void Setting::load(const path& path) {
-	ifstream ifs(path, ios::binary);
+	ifstream ifs(path);
 	if (!ifs) {
 		log("設定ファイルを開けません。");
 		return;
 	}
-	string json_data((istreambuf_iterator<char>(ifs)), istreambuf_iterator<char>());
-	json j = json::parse(json_data);
 
-	if (j.contains("duration")) {
-		duration = chrono::seconds{ j["duration"].get<long long>() };
-	}
+	string line;
+	while (getline(ifs, line)) {
+		auto pos = line.find(':');
+		if (pos == string::npos) continue;
 
-	if (j.contains("savePath")) {
-		save_path = str_to_wstr(j["savePath"].get<string>());
-	}
+		string key = line.substr(0, pos);
+		string val = line.substr(pos + 1);
 
-	if (j.contains("fileFormat")) {
-		file_format = str_to_wstr(j["fileFormat"].get<string>());
-	}
+		// 前後の空白・引用符などを除去
+		key.erase(remove_if(key.begin(), key.end(), ::isspace), key.end());
+		val.erase(remove_if(val.begin(), val.end(), ::isspace), val.end());
+		key.erase(remove(key.begin(), key.end(), '\"'), key.end());
+		val.erase(remove(val.begin(), val.end(), '\"'), val.end());
+		val.erase(remove(val.begin(), val.end(), ','), val.end());
 
-	if (j.contains("maxAutosaves")) {
-		max_autosaves = j["maxAutosaves"].get<size_t>();
+		if (key == "duration") {
+			duration = chrono::seconds{ stoll(val) };
+		}
+		else if (key == "savePath") {
+			save_path = str_to_wstr(val);
+		}
+		else if (key == "fileFormat") {
+			file_format = str_to_wstr(val);
+		}
+		else if (key == "maxAutosaves") {
+			max_autosaves = stoull(val);
+		}
 	}
 }
 
 void Setting::store(const path& path) const {
-	json j;
-	j["duration"] = duration.count();
-	j["savePath"] = wstr_to_utf8(save_path);
-	j["fileFormat"] = wstr_to_utf8(file_format);
-	j["maxAutosaves"] = max_autosaves;
-
-	ofstream ofs{ path };
-	if (ofs) {
-		ofs << j.dump(5);
-	}
-	else {
+	ofstream ofs(path);
+	if (!ofs) {
 		log("設定ファイルを書き込めません。");
+		return;
 	}
+
+	ofs << "{\n";
+	ofs << "  \"duration\": " << duration.count() << ",\n";
+	ofs << "  \"savePath\": \"" << wstr_to_utf8(save_path) << "\",\n";
+	ofs << "  \"fileFormat\": \"" << wstr_to_utf8(file_format) << "\",\n";
+	ofs << "  \"maxAutosaves\": " << max_autosaves << "\n";
+	ofs << "}\n";
 }
+
 
 void save_project(const path& path) {
 	auto& state = get_state();
@@ -241,13 +251,14 @@ BOOL __cdecl func_init(FilterPlugin* fp) {
 	path aviutl_path{ path_str };
 
 	state.aviutl_dir = aviutl_path.parent_path();
-	auto self_dir = path{ WinWrap::Module{ fp->dll_hinst }.getFileNameW() }.parent_path();
+	wchar_t path_buf[MAX_PATH]{};
+	::GetModuleFileNameW(fp->dll_hinst, path_buf, MAX_PATH);
+	auto self_dir = std::filesystem::path{ path_buf }.parent_path();
 	state.setting_path = self_dir / (str_to_wstr(PLUGIN_NAME) + L".json");
 	state.default_dir = state.aviutl_dir / PLUGIN_NAME;
 	
 	// 各アドレスの取得
-	WinWrap::Module aviutl{};
-	auto aviutl_base = reinterpret_cast<uintptr_t>(aviutl.getHandle());
+	uintptr_t aviutl_base = reinterpret_cast<uintptr_t>(::GetModuleHandle(nullptr));
 	state.adr_editp = reinterpret_cast<decltype(state.adr_editp)>(aviutl_base + 0x08717c);
 	state.save_project = reinterpret_cast<decltype(state.save_project)>(aviutl_base + 0x024160);
 	uintptr_t new_project_flag_adr = reinterpret_cast<uintptr_t>(*state.adr_editp) + 0x20c;
