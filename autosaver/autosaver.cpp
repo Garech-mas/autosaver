@@ -11,7 +11,7 @@ Setting& get_setting() {
 
 	auto& state = get_state();
 	if (s.save_path.empty()) {
-		s.save_path = state.default_dir;
+		s.save_path = "autosaver";
 	}
 
 	return s;
@@ -19,20 +19,6 @@ Setting& get_setting() {
 
 void log(const string message) {
 	printf("[" PLUGIN_NAME "] %s\n", message.c_str());
-}
-
-wstring str_to_wstr(const string& str) {
-    int size_needed = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), (int)str.size(), NULL, 0);
-    wstring wstr(size_needed, 0);
-    MultiByteToWideChar(CP_UTF8, 0, str.c_str(), (int)str.size(), &wstr[0], size_needed);
-    return wstr;
-}
-
-string wstr_to_utf8(const wstring& wstr) {
-	int size_needed = WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), static_cast<int>(wstr.size()), nullptr, 0, nullptr, nullptr);
-	string str(size_needed, 0);
-	WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), static_cast<int>(wstr.size()), &str[0], size_needed, nullptr, nullptr);
-	return str;
 }
 
 string wstr_to_sjis(const wstring& wstr) {
@@ -56,58 +42,60 @@ string sanitize_filename(const string& input) {
 }
 
 // 現在読み込んでるプロジェクト名を返す 新規なら"無題"
-wstring get_project_name() {
+string get_project_name() {
 	auto project_name = get_state().si.project_name;
 	if (project_name && project_name[0] != '\0') {
-		return ::path{ project_name }.stem().wstring();
+		return ::path{ project_name }.stem().string();
 	}
 	else {
-		return L"無題";
+		return "無題";
 	}
 }
 
 // 自動保存するディレクトリを取得 置換処理も行う
-path get_autosave_dir() {
+path get_autosave_dir(bool IsCheck) {
 	auto& setting = get_setting();
 	auto& state = get_state();
-	wstring path_str = setting.save_path;
-	wstring project_name = get_project_name();
-	wstring project_dir;
+	string path_str = setting.save_path.string();
+	string project_name = get_project_name();
+	string project_dir;
 
-	if (state.si.project_name && state.si.project_name[0] != L'\0') {
-		wstring project_path = str_to_wstr(state.si.project_name);
-		size_t last_slash = project_path.find_last_of(L"\\/");
-		project_dir = (last_slash != wstring::npos) ? project_path.substr(0, last_slash) : L"";
+	if (state.si.project_name && state.si.project_name[0] != '\0') {
+		string project_path = state.si.project_name;
+		size_t last_slash = project_path.find_last_of("\\/");
+		project_dir = (last_slash != string::npos) ? project_path.substr(0, last_slash) : "";
 	}
 	else {
-		project_dir = state.default_dir;
+		project_dir = state.default_dir.string();
 	}
 
 	size_t pos;
 
 	// %PROJECTNAME%
-	pos = path_str.find(L"%PROJECTNAME%");
-	if (pos != wstring::npos) {
-		path_str.replace(pos, wcslen(L"%PROJECTNAME%"), project_name);
+	pos = path_str.find("%PROJECTNAME%");
+	if (IsCheck && pos != string::npos) {
+		path_str.erase(pos);
+	} else if (pos != string::npos) {
+		path_str.replace(pos, strlen("%PROJECTNAME%"), project_name);
 	}
 
 	// %PROJECTDIR%
-	pos = path_str.find(L"%PROJECTDIR%");
-	if (pos != wstring::npos) {
-		path_str.replace(pos, wcslen(L"%PROJECTDIR%"), project_dir);
+	pos = path_str.find("%PROJECTDIR%");
+	if (pos != string::npos) {
+		path_str.replace(pos, strlen("%PROJECTDIR%"), project_dir);
 	}
 
 	// 相対パス処理
-	if (PathIsRelativeW(path_str.c_str())) {
-		WCHAR buf[MAX_PATH] = {};
-		wcscpy_s(buf, state.aviutl_dir.c_str());
-		PathAppendW(buf, path_str.c_str());
+	if (PathIsRelative(path_str.c_str())) {
+		CHAR buf[MAX_PATH] = {};
+		strcpy_s(buf, state.aviutl_dir.string().c_str());
+		PathAppend(buf, path_str.c_str());
 		path_str = buf;
 	}
 
-	// ディレクトリ作成（CreateDirectoryW は親ディレクトリがなければ失敗する）
-	if (GetFileAttributesW(path_str.c_str()) == INVALID_FILE_ATTRIBUTES) {
-		CreateDirectoryW(path_str.c_str(), nullptr);
+	// ディレクトリ作成（CreateDirectoryは親ディレクトリがなければ失敗する）
+	if (GetFileAttributes(path_str.c_str()) == INVALID_FILE_ATTRIBUTES) {
+		CreateDirectory(path_str.c_str(), nullptr);
 	}
 
 	return path_str;
@@ -115,11 +103,11 @@ path get_autosave_dir() {
 
 }
 
-string generate_filepath(wstring format) {
+string generate_filepath(string format) {
 	// %PROJECTNAME% を置換
-	size_t projectNamePos = format.find(L"%PROJECTNAME%");
-	if (projectNamePos != wstring::npos) {
-		format.replace(projectNamePos, wcslen(L"%PROJECTNAME%"), get_project_name());
+	size_t projectNamePos = format.find("%PROJECTNAME%");
+	if (projectNamePos != string::npos) {
+		format.replace(projectNamePos, strlen("%PROJECTNAME%"), get_project_name());
 	}
 
 	// 日時文字列を作成
@@ -127,25 +115,25 @@ string generate_filepath(wstring format) {
 	tm local_tm;
 	localtime_s(&local_tm, &t);
 
-	wchar_t datetime[256];
-	if (format.find(L'%') != wstring::npos) {
-		wcsftime(datetime, sizeof(datetime) / sizeof(wchar_t), format.c_str(), &local_tm);
+	char datetime[256];
+	if (format.find('%') != string::npos) {
+		strftime(datetime, sizeof(datetime) / sizeof(wchar_t), format.c_str(), &local_tm);
 	}
 	else {
-		wcscpy_s(datetime, format.c_str());
+		strcpy_s(datetime, format.c_str());
 	}
 
-	string filename = wstr_to_sjis(datetime);
+	string filename = datetime;
 	filename = sanitize_filename(filename);
 
-	wstring autosave_dir = get_autosave_dir();
+	string autosave_dir = get_autosave_dir().string();
 	string fullpath_sjis;
 	int counter = 1;
 	string base = filename;
 	do {
 		string trial = base + ((counter > 1) ? ("-" + to_string(counter)) : "") + ".aup";
-		wstring full = autosave_dir + L"\\" + str_to_wstr(trial);
-		fullpath_sjis = wstr_to_sjis(full);
+		string full = autosave_dir + "\\" + trial;
+		fullpath_sjis = full;
 		counter++;
 	} while (GetFileAttributesA(fullpath_sjis.c_str()) != INVALID_FILE_ATTRIBUTES);
 
@@ -179,10 +167,7 @@ void Setting::load(const path& path) {
 			duration = chrono::seconds{ stoll(val) };
 		}
 		else if (key == "savePath") {
-			save_path = str_to_wstr(val);
-		}
-		else if (key == "fileFormat") {
-			file_format = str_to_wstr(val);
+			save_path = val;
 		}
 		else if (key == "maxAutosaves") {
 			max_autosaves = stoull(val);
@@ -199,8 +184,7 @@ void Setting::store(const path& path) const {
 
 	ofs << "{\n";
 	ofs << "  \"duration\": " << duration.count() << ",\n";
-	ofs << "  \"savePath\": \"" << wstr_to_utf8(save_path) << "\",\n";
-	ofs << "  \"fileFormat\": \"" << wstr_to_utf8(file_format) << "\",\n";
+	ofs << "  \"savePath\": \"" << save_path.string() << "\",\n";
 	ofs << "  \"maxAutosaves\": " << max_autosaves << "\n";
 	ofs << "}\n";
 }
@@ -217,8 +201,8 @@ void delete_old_project(const path& path, size_t maxAutosaves) {
 	vector<::path> files;
 	
 	for (const auto& entry : directory_iterator(path)) {
-		std::wstring ext = entry.path().extension().wstring();
-		if (ext.starts_with(L".aup")) {
+		std::string ext = entry.path().extension().string();
+		if (ext.starts_with(".aup")) {
 			files.push_back(entry.path());
 		}
 	}
@@ -241,7 +225,7 @@ BOOL __cdecl func_init(FilterPlugin* fp) {
 	state.last_saved = chrono::system_clock::now();
 
 	if (state.si.build != 11003) {
-		MessageBoxW(fp->hwnd_parent, L"autosaverを動作させるためには、バージョン1.10のAviUtlが必要です。", str_to_wstr(PLUGIN_NAME).c_str(), MB_ICONINFORMATION);
+		MessageBox(fp->hwnd_parent, "autosaverを動作させるためには、バージョン1.10のAviUtlが必要です。", PLUGIN_NAME, MB_ICONINFORMATION);
 		return FALSE;
 	}
 
@@ -254,7 +238,8 @@ BOOL __cdecl func_init(FilterPlugin* fp) {
 	wchar_t path_buf[MAX_PATH]{};
 	::GetModuleFileNameW(fp->dll_hinst, path_buf, MAX_PATH);
 	auto self_dir = std::filesystem::path{ path_buf }.parent_path();
-	state.setting_path = self_dir / (str_to_wstr(PLUGIN_NAME) + L".json");
+	const path filename = string(PLUGIN_NAME) + ".json";
+	state.setting_path = self_dir / filename;
 	state.default_dir = state.aviutl_dir / PLUGIN_NAME;
 	
 	// 各アドレスの取得
@@ -264,13 +249,19 @@ BOOL __cdecl func_init(FilterPlugin* fp) {
 	uintptr_t new_project_flag_adr = reinterpret_cast<uintptr_t>(*state.adr_editp) + 0x20c;
 	state.new_project_flag = reinterpret_cast<uintptr_t*>(new_project_flag_adr);
 
-	if (exists(state.setting_path)) {
-		setting.load(state.setting_path);
+	try {
+		if (exists(state.setting_path)) {
+			setting.load(state.setting_path);
+		}
+		else {
+			setting.store(state.setting_path);
+		}
 	}
-	else {
+	catch (const std::system_error& e) {
+		MessageBox(fp->hwnd_parent, "設定ファイル（autosaver.json）を読み込めませんでした。\n初期値にリセットされるため、必要な場合は再度設定をやり直してください。", PLUGIN_NAME, MB_ICONWARNING);
+		std::filesystem::remove(state.setting_path);
 		setting.store(state.setting_path);
 	}
-
 	return TRUE;
 }
 
@@ -307,7 +298,7 @@ BOOL run(FilterPlugin* fp) {
 		}
 	}
 	catch (...) {
-		MessageBoxW(fp->hwnd_parent, L"バックアップの保存中にエラーが発生しました。", str_to_wstr(PLUGIN_NAME).c_str(), MB_ICONWARNING);
+		MessageBox(fp->hwnd_parent, "バックアップの保存中にエラーが発生しました。", PLUGIN_NAME, MB_ICONWARNING);
 	}
 	return TRUE;
 }

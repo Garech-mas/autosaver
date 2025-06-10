@@ -43,7 +43,7 @@
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
-    <CharacterSet>Unicode</CharacterSet>
+    <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -139,6 +139,7 @@ $(SolutionDir)Test\aviutl.exe</Command>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <ModuleDefinitionFile>autosaver.def</ModuleDefinitionFile>
+      <GenerateMapFile>true</GenerateMapFile>
     </Link>
     <PostBuildEvent>
       <Command>copy /Y "$(TargetPath)" "$(SolutionDir)Test\$(TargetFileName)"</Command>
@@ -149,6 +150,7 @@ $(SolutionDir)Test\aviutl.exe</Command>
     <ClCompile Include="gui.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\README.md" />
     <None Include="autosaver.def" />
   </ItemGroup>
   <ItemGroup>

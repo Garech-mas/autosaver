@@ -6,6 +6,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="autosaver.def" />
+    <None Include="..\README.md" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="gui.h" />

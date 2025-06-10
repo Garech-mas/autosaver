@@ -17,13 +17,13 @@ using namespace std;
 using namespace filesystem;
 using namespace AviUtl;
 
-const wstring DEFAULT_DATE_FORMAT = L"%PROJECTNAME%_%F_%R";
+const string DEFAULT_DATE_FORMAT = "%PROJECTNAME%_%F_%R";
 
 
 struct Setting {
     chrono::seconds duration{ 60 };
     path save_path{};
-    wstring file_format{ DEFAULT_DATE_FORMAT };
+    string file_format{ DEFAULT_DATE_FORMAT };
     size_t max_autosaves{ 100 };
 
     void load(const path& path);
@@ -39,15 +39,13 @@ struct State {
     SysInfo si;                                             // AviUtl::SysInfo
     EditHandle** adr_editp{};                               // エディットハンドル
     uintptr_t* new_project_flag{};                          // 0なら新規プロジェクトとして読み込む
+    BOOL fileOpened = false;                                // ファイルを開いた直後にのみ立つフラグ
 	BOOL(__fastcall* save_project)(EditHandle*, LPCSTR) {}; // プロジェクト保存関数へのポインタ
 };
 State& get_state();
 
 void log(string message);
-string generate_filepath(wstring format);
-wstring str_to_wstr(const string& str);
-string wstr_to_utf8(const wstring& wstr);
+string generate_filepath(string format);
 string wstr_to_sjis(const wstring& wstr);
-string sanitize_filename(const string& input);
-path get_autosave_dir();
-wstring get_project_name();
+path get_autosave_dir(bool IsCheck = FALSE);
+string get_project_name();
