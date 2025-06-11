@@ -3,6 +3,8 @@ AviUtlの編集プロジェクトを自動保存します。
 
 拡張編集の自動バックアップと違い、**AviUtl本体側の編集情報 ([Curve Editor](https://github.com/mimaraka/aviutl-plugin-curve_editor) のベジェ曲線等) も保存することができます。**
 
+__ePi氏の最新版（r3）から、機能の拡充・いくつかのバグ修正を含んだバージョンとなります。__
+
 ## ダウンロード・インストール
 https://github.com/Garech-mas/autosaver/releases/latest
 
