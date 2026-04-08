@@ -10,7 +10,7 @@
 #include <aviutl/filter.hpp>
 
 #define PLUGIN_NAME "autosaver"
-#define PLUGIN_VERSION " r3_gr_6"
+#define PLUGIN_VERSION " r3_gr_7"
 #define PLUGIN_INFO PLUGIN_NAME PLUGIN_VERSION " by Garech (original by ePi)"
 
 using namespace std;
@@ -47,5 +47,7 @@ State& get_state();
 void log(string message);
 string generate_filepath(string format);
 string wstr_to_sjis(const wstring& wstr);
+wstring sjis_to_wstr(const string& str);
 path get_autosave_dir(bool IsCheck = FALSE);
 string get_project_name();
+void save_project(const string& path);

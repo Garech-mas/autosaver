@@ -28,6 +28,13 @@ string wstr_to_sjis(const wstring& wstr) {
 	return str;
 }
 
+wstring sjis_to_wstr(const string& str) {
+	int size_needed = MultiByteToWideChar(932, 0, str.c_str(), static_cast<int>(str.size()), nullptr, 0);
+	wstring wstr(size_needed, 0);
+	MultiByteToWideChar(932, 0, str.c_str(), static_cast<int>(str.size()), &wstr[0], size_needed);
+	return wstr;
+}
+
 string sanitize_filename(const string& input) {
 	string invalidChars = "<>:\"/\\|?*";
 	string result;
@@ -41,11 +48,35 @@ string sanitize_filename(const string& input) {
 	return result;
 }
 
+wstring sanitize_filename(const wstring& input) {
+	const wstring invalidChars = L"<>:\"/\\|?*";
+	wstring result;
+	result.reserve(input.size());
+
+	transform(input.begin(), input.end(), back_inserter(result),
+		[&invalidChars](wchar_t ch) {
+			return (invalidChars.find(ch) != wstring::npos) ? L'-' : ch;
+		});
+
+	return result;
+}
+
 // 現在読み込んでるプロジェクト名を返す 新規なら"無題"
 string get_project_name() {
 	auto project_name = get_state().si.project_name;
 	if (project_name && project_name[0] != '\0') {
-		return ::path{ project_name }.stem().string();
+		string filename = project_name;
+		const auto last_slash = filename.find_last_of("\\/");
+		if (last_slash != string::npos) {
+			filename = filename.substr(last_slash + 1);
+		}
+
+		const auto last_dot = filename.find_last_of('.');
+		if (last_dot != string::npos) {
+			filename = filename.substr(0, last_dot);
+		}
+
+		return filename;
 	}
 	else {
 		return "無題";
@@ -104,10 +135,13 @@ path get_autosave_dir(bool IsCheck) {
 }
 
 string generate_filepath(string format) {
+	wstring format_w = sjis_to_wstr(format);
+	const wstring project_name_w = sjis_to_wstr(get_project_name());
+
 	// %PROJECTNAME% を置換
-	size_t projectNamePos = format.find("%PROJECTNAME%");
-	if (projectNamePos != string::npos) {
-		format.replace(projectNamePos, strlen("%PROJECTNAME%"), get_project_name());
+	size_t projectNamePos = format_w.find(L"%PROJECTNAME%");
+	if (projectNamePos != wstring::npos) {
+		format_w.replace(projectNamePos, wcslen(L"%PROJECTNAME%"), project_name_w);
 	}
 
 	// 日時文字列を作成
@@ -115,30 +149,34 @@ string generate_filepath(string format) {
 	tm local_tm;
 	localtime_s(&local_tm, &t);
 
-	char datetime[256];
-	if (format.find('%') != string::npos) {
-		strftime(datetime, sizeof(datetime) / sizeof(wchar_t), format.c_str(), &local_tm);
+	wchar_t datetime[256];
+	if (format_w.find(L'%') != wstring::npos) {
+		wcsftime(datetime, _countof(datetime), format_w.c_str(), &local_tm);
 	}
 	else {
-		strcpy_s(datetime, format.c_str());
+		wcscpy_s(datetime, format_w.c_str());
 	}
 
-	string filename = datetime;
+	wstring filename = datetime;
 	filename = sanitize_filename(filename);
 
-	string autosave_dir = get_autosave_dir().string();
+	const wstring autosave_dir_w = sjis_to_wstr(get_autosave_dir().string());
 	string fullpath_sjis;
 	int counter = 1;
-	string base = filename;
+	const wstring base = filename;
 	do {
-		string trial = base + ((counter > 1) ? ("-" + to_string(counter)) : "") + ".aup";
-		string full = autosave_dir + "\\" + trial;
-		fullpath_sjis = full;
+		wstring trial = base + ((counter > 1) ? (L"-" + to_wstring(counter)) : L"") + L".aup";
+		wstring full = autosave_dir_w + L"\\" + trial;
+		fullpath_sjis = wstr_to_sjis(full);
 		counter++;
 	} while (GetFileAttributesA(fullpath_sjis.c_str()) != INVALID_FILE_ATTRIBUTES);
 
 	return fullpath_sjis;
 
+}
+
+bool is_valid_save_filepath(const string& path) {
+	return path.size() < MAX_PATH;
 }
 
 void Setting::load(const path& path) {
@@ -159,8 +197,8 @@ void Setting::load(const path& path) {
 		// 前後の空白・引用符などを除去
 		key.erase(remove_if(key.begin(), key.end(), ::isspace), key.end());
 		val.erase(remove_if(val.begin(), val.end(), ::isspace), val.end());
-		key.erase(remove(key.begin(), key.end(), '\"'), key.end());
-		val.erase(remove(val.begin(), val.end(), '\"'), val.end());
+		key.erase(remove(key.begin(), key.end(), '"'), key.end());
+		val.erase(remove(val.begin(), val.end(), '"'), val.end());
 		val.erase(remove(val.begin(), val.end(), ','), val.end());
 
 		if (key == "duration") {
@@ -194,9 +232,9 @@ void Setting::store(const path& path) const {
 }
 
 
-void save_project(const path& path) {
+void save_project(const string& path) {
 	auto& state = get_state();
-	state.save_project(*state.adr_editp, path.string().c_str());
+	state.save_project(*state.adr_editp, path.c_str());
 }
 
 
@@ -280,7 +318,12 @@ BOOL run(FilterPlugin* fp) {
 	TRY_START:
 	try {
 		auto autosave_dir = get_autosave_dir();
-		save_project(generate_filepath(setting.file_format));
+		auto save_path = generate_filepath(setting.file_format);
+		if (!is_valid_save_filepath(save_path)) {
+			MessageBoxA(fp->hwnd_parent, "ファイルパスが長すぎるため保存できませんでした。\n保存場所またはプロジェクト名を見直してください。", PLUGIN_NAME, MB_ICONWARNING | MB_TOPMOST);
+			return FALSE;
+		}
+		save_project(save_path);
 
 		if (setting.max_autosaves > 0) {
 			delete_old_project(autosave_dir, setting.max_autosaves);
