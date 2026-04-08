@@ -10,7 +10,7 @@
 #include <aviutl/filter.hpp>
 
 #define PLUGIN_NAME "autosaver"
-#define PLUGIN_VERSION " r3_gr_7"
+#define PLUGIN_VERSION " r3_gr_8"
 #define PLUGIN_INFO PLUGIN_NAME PLUGIN_VERSION " by Garech (original by ePi)"
 
 using namespace std;

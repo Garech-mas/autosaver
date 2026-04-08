@@ -327,9 +327,9 @@ BOOL func_WndProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam, EditHan
         break;
     case AviUtl::detail::FilterPluginWindowMessage::ChangeActive:
         // プロジェクトファイルが開かれたとき
-        if (state.si.project_name != NULL && ::path{ state.si.project_name }.parent_path() == get_autosave_dir()) {
-            MessageBoxA(fp->hwnd_parent, "バックアップフォルダ内のプロジェクトファイルを開いています。元ファイルへの上書き保存を忘れずに行ってください。", PLUGIN_NAME, MB_ICONINFORMATION | MB_TOPMOST);
+        if (state.si.project_name != NULL && ::path{ state.si.project_name }.parent_path() == get_autosave_dir() && *state.new_project_flag != 0) {
             *state.new_project_flag = 0;
+            MessageBoxA(fp->hwnd_parent, "バックアップフォルダ内のプロジェクトファイルを開いています。元ファイルへの上書き保存を忘れずに行ってください。", PLUGIN_NAME, MB_ICONINFORMATION | MB_TOPMOST);
         }
         break;
     }
