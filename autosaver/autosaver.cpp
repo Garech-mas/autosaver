@@ -169,6 +169,9 @@ void Setting::load(const path& path) {
 		else if (key == "savePath") {
 			save_path = val;
 		}
+		else if (key == "fileFormat") {
+			file_format = val;
+		}
 		else if (key == "maxAutosaves") {
 			max_autosaves = stoull(val);
 		}
@@ -185,6 +188,7 @@ void Setting::store(const path& path) const {
 	ofs << "{\n";
 	ofs << "  \"duration\": " << duration.count() << ",\n";
 	ofs << "  \"savePath\": \"" << save_path.string() << "\",\n";
+	ofs << "  \"fileFormat\": \"" << file_format << "\",\n";
 	ofs << "  \"maxAutosaves\": " << max_autosaves << "\n";
 	ofs << "}\n";
 }

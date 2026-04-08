@@ -60,9 +60,9 @@ BOOL func_WndProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam, EditHan
     case AviUtl::detail::FilterPluginWindowMessage::Init:
     {
         // フォント指定
-        HFONT font = CreateFont(12, 0, 0, 0, FW_MEDIUM, FALSE, FALSE, FALSE,
+        HFONT font = CreateFontA(12, 0, 0, 0, FW_MEDIUM, FALSE, FALSE, FALSE,
             SHIFTJIS_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-            PROOF_QUALITY, DEFAULT_PITCH | FF_MODERN, L"ＭＳ Ｐゴシック");
+            PROOF_QUALITY, DEFAULT_PITCH | FF_MODERN, "ＭＳ Ｐゴシック");
 
         // ボタン配置
         HWND button_open_backup_file = CreateWindowA(
@@ -161,7 +161,7 @@ BOOL func_WndProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam, EditHan
         HWND edit_backup_save_path = CreateWindowExA(
             WS_EX_CLIENTEDGE,
             "EDIT",
-            wstr_to_sjis(setting.save_path).c_str(),
+            setting.save_path.string().c_str(),
             WS_CHILD | WS_TABSTOP | WS_VISIBLE | ES_AUTOHSCROLL | ES_LEFT,
             15, 110,
             195, 20,
@@ -188,7 +188,7 @@ BOOL func_WndProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam, EditHan
         HWND edit_file_name = CreateWindowExA(
             WS_EX_CLIENTEDGE,
             "EDIT",
-            wstr_to_sjis(setting.file_format).c_str(),
+            setting.file_format.c_str(),
             WS_CHILD | WS_TABSTOP | WS_VISIBLE | ES_AUTOHSCROLL | ES_LEFT,
             15, 145,
             195, 20,
@@ -212,34 +212,36 @@ BOOL func_WndProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam, EditHan
             break;
         case ID_EDIT_BACKUP_INTERVAL:
             if (HIWORD(wparam) == EN_KILLFOCUS) {
-                WCHAR buf[16];
-                GetDlgItemText(hwnd, ID_EDIT_BACKUP_INTERVAL, buf, sizeof(buf) / sizeof(WCHAR));
-                if (_wtoi(buf) < 1) {
+                CHAR buf[16];
+                GetDlgItemTextA(hwnd, ID_EDIT_BACKUP_INTERVAL, buf, sizeof(buf) / sizeof(CHAR));
+                const int value = atoi(buf);
+                if (atoi(buf) < 1) {
                     MessageBeep(MB_OK);
                     setting.duration = chrono::minutes(1);
-                    SetDlgItemText(hwnd, ID_EDIT_BACKUP_INTERVAL, L"1");
+                    SetDlgItemTextA(hwnd, ID_EDIT_BACKUP_INTERVAL, "1");
                 }
-                else if (_wtoi(buf) > 10000) {
+                else if (value > 10000) {
                     MessageBeep(MB_OK);
                     setting.duration = chrono::minutes(10000);
-                    SetDlgItemText(hwnd, ID_EDIT_BACKUP_INTERVAL, L"10000");
+                    SetDlgItemTextA(hwnd, ID_EDIT_BACKUP_INTERVAL, "10000");
                 }
                 else {
-                    setting.duration = chrono::minutes(_wtoi(buf));
+                    setting.duration = chrono::minutes(value);
                 }
                 setting.store(state.setting_path);
             }
             break;
         case ID_EDIT_BACKUP_LIMIT:
             if (HIWORD(wparam) == EN_KILLFOCUS) {
-                WCHAR buf[16];
-                const WCHAR* NO_LIMIT = L"上限なし";
-                GetDlgItemText(hwnd, ID_EDIT_BACKUP_LIMIT, buf, sizeof(buf) / sizeof(WCHAR));
-                if ((wcscmp(buf, NO_LIMIT) != 0 && _wtoi(buf) == 0) || _wtoi(buf) > 1000) {
+                CHAR buf[16];
+                const string NO_LIMIT = "上限なし";
+                GetDlgItemTextA(hwnd, ID_EDIT_BACKUP_LIMIT, buf, sizeof(buf) / sizeof(CHAR));
+                const int value = atoi(buf);
+                if ((strcmp(buf, NO_LIMIT.c_str()) != 0 && value == 0) || value > 1000) {
                     MessageBeep(MB_OK);
-                    SetDlgItemText(hwnd, ID_EDIT_BACKUP_LIMIT, NO_LIMIT);
+                    SetDlgItemTextA(hwnd, ID_EDIT_BACKUP_LIMIT, NO_LIMIT.c_str());
                 }
-                setting.max_autosaves = _wtoi(buf);
+                setting.max_autosaves = value;
                 setting.store(state.setting_path);
             }
             break;
@@ -251,7 +253,7 @@ BOOL func_WndProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam, EditHan
                 if (!new_path.empty())
                 {
                     setting.save_path = new_path;
-                    SetDlgItemText(hwnd, ID_EDIT_BACKUP_SAVE_PATH, setting.save_path.c_str());
+                    SetDlgItemTextA(hwnd, ID_EDIT_BACKUP_SAVE_PATH, setting.save_path.string().c_str());
 
                 }
                 generate_filepath(setting.file_format);
@@ -260,7 +262,7 @@ BOOL func_WndProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam, EditHan
                 MessageBeep(MB_OK);
                 log("不正なファイル名形式が入力されました。");
                 setting.save_path = before_save_path;
-                SetDlgItemText(hwnd, ID_EDIT_BACKUP_SAVE_PATH, setting.save_path.c_str());
+                SetDlgItemTextA(hwnd, ID_EDIT_BACKUP_SAVE_PATH, setting.save_path.string().c_str());
             }
             setting.store(state.setting_path);
 
@@ -269,8 +271,8 @@ BOOL func_WndProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam, EditHan
 
         case ID_EDIT_BACKUP_SAVE_PATH:
             if (HIWORD(wparam) == EN_KILLFOCUS) {
-                WCHAR buf[MAX_PATH];
-                GetDlgItemText(hwnd, ID_EDIT_BACKUP_SAVE_PATH, buf, sizeof(buf) / sizeof(WCHAR));
+                CHAR buf[MAX_PATH];
+                GetDlgItemTextA(hwnd, ID_EDIT_BACKUP_SAVE_PATH, buf, sizeof(buf) / sizeof(CHAR));
 
                 auto before_save_path = setting.save_path;
                 setting.save_path = buf;
@@ -281,7 +283,7 @@ BOOL func_WndProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam, EditHan
                     MessageBeep(MB_OK);
                     log("不正な保存場所が入力されました。");
                     setting.save_path = before_save_path;
-                    SetDlgItemText(hwnd, ID_EDIT_BACKUP_SAVE_PATH, setting.save_path.c_str());
+                    SetDlgItemTextA(hwnd, ID_EDIT_BACKUP_SAVE_PATH, setting.save_path.string().c_str());
                 }
 
                 setting.store(state.setting_path);
@@ -289,29 +291,31 @@ BOOL func_WndProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam, EditHan
             break;
         case ID_EDIT_FILE_NAME:
             if (HIWORD(wparam) == EN_KILLFOCUS) {
-                WCHAR buf[256];
+                CHAR buf[256];
 
-                GetDlgItemText(hwnd, ID_EDIT_FILE_NAME, buf, sizeof(buf) / sizeof(WCHAR));
+                GetDlgItemTextA(hwnd, ID_EDIT_FILE_NAME, buf, sizeof(buf) / sizeof(CHAR));
 
-                if (*buf == L'\0') {
+                if (*buf == '\0') {
                     setting.file_format = DEFAULT_DATE_FORMAT;
-                    SetDlgItemText(hwnd, ID_EDIT_FILE_NAME, DEFAULT_DATE_FORMAT.c_str());
+                    SetDlgItemTextA(hwnd, ID_EDIT_FILE_NAME, DEFAULT_DATE_FORMAT.c_str());
                 }
 
                 try {
-                    auto filename = path(generate_filepath(buf)).filename();
-                    log("保存ファイル名: \"" + filename.string() + "\"");
-                    setting.file_format = buf;
+                    auto fullpath = generate_filepath(buf);
+                    const auto pos = fullpath.find_last_of("\\/");
+                    const string filename = (pos == string::npos) ? fullpath : fullpath.substr(pos + 1);
+                    log("保存ファイル名: \"" + filename + "\"");
+                    setting.file_format = string(buf);
                 }
                 catch (const format_error) {
                     MessageBeep(MB_OK);
                     log("不正なファイル名形式が入力されました。");
-                    SetDlgItemText(hwnd, ID_EDIT_FILE_NAME, setting.file_format.c_str());
+                    SetDlgItemTextA(hwnd, ID_EDIT_FILE_NAME, setting.file_format.c_str());
                 }
                 catch (const filesystem_error) {
                     MessageBeep(MB_OK);
                     log("不正なファイル名形式が入力されました。");
-                    SetDlgItemText(hwnd, ID_EDIT_FILE_NAME, setting.file_format.c_str());
+                    SetDlgItemTextA(hwnd, ID_EDIT_FILE_NAME, setting.file_format.c_str());
                 }
 
                 setting.store(state.setting_path);
@@ -324,7 +328,7 @@ BOOL func_WndProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam, EditHan
     case AviUtl::detail::FilterPluginWindowMessage::ChangeActive:
         // プロジェクトファイルが開かれたとき
         if (state.si.project_name != NULL && ::path{ state.si.project_name }.parent_path() == get_autosave_dir()) {
-            MessageBoxW(fp->hwnd_parent, L"バックアップフォルダ内のプロジェクトファイルを開いています。元ファイルへの上書き保存を忘れずに行ってください。", str_to_wstr(PLUGIN_NAME).c_str(), MB_ICONINFORMATION | MB_TOPMOST);
+            MessageBoxA(fp->hwnd_parent, "バックアップフォルダ内のプロジェクトファイルを開いています。元ファイルへの上書き保存を忘れずに行ってください。", PLUGIN_NAME, MB_ICONINFORMATION | MB_TOPMOST);
             *state.new_project_flag = 0;
         }
         break;

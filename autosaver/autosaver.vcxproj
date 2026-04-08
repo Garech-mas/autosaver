@@ -75,7 +75,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>$(ProjectDir)aviutl_exedit_sdk;$(ProjectDir)winwrap</AdditionalIncludeDirectories>
       <AdditionalOptions>/source-charset:utf-8  /d1clrcxxstd %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
@@ -85,7 +85,8 @@
       <ModuleDefinitionFile>autosaver.def</ModuleDefinitionFile>
     </Link>
     <PostBuildEvent>
-      <Command>copy /Y "$(TargetPath)" "$(SolutionDir)Test\$(TargetFileName)"</Command>
+      <Command>if not exist "$(SolutionDir)..\_test\plugins" mkdir "$(SolutionDir)..\_test\plugins"
+copy /Y "$(TargetPath)" "$(SolutionDir)..\_test\plugins\$(TargetFileName)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release(PDB)|Win32'">
@@ -96,7 +97,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>$(ProjectDir)aviutl_exedit_sdk;$(ProjectDir)winwrap</AdditionalIncludeDirectories>
       <AdditionalOptions>/source-charset:utf-8  /d1clrcxxstd %(AdditionalOptions)</AdditionalOptions>
       <DisableSpecificWarnings>4828;%(DisableSpecificWarnings)</DisableSpecificWarnings>
@@ -142,7 +143,8 @@ $(SolutionDir)Test\aviutl.exe</Command>
       <GenerateMapFile>true</GenerateMapFile>
     </Link>
     <PostBuildEvent>
-      <Command>copy /Y "$(TargetPath)" "$(SolutionDir)Test\$(TargetFileName)"</Command>
+      <Command>if not exist "$(SolutionDir)..\_test\plugins" mkdir "$(SolutionDir)..\_test\plugins"
+copy /Y "$(TargetPath)" "$(SolutionDir)..\_test\plugins\$(TargetFileName)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
